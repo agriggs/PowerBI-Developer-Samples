@@ -17,7 +17,7 @@ namespace PowerBIEmbedded_AppOwnsData.Controllers
     public class HomeController : Controller
     {
         private readonly IEmbedService m_embedService;
-
+       
         public HomeController()
         {
             m_embedService = new EmbedService();
@@ -36,7 +36,9 @@ namespace PowerBIEmbedded_AppOwnsData.Controllers
 
         public async Task<ActionResult> EmbedReport(string username, string roles)
         {
-            var embedResult = await m_embedService.EmbedReport(username, roles);
+            string reportId = ConfigurationManager.AppSettings["reportId"];
+
+            var embedResult = await m_embedService.EmbedReport(reportId);
             if (embedResult)
             {
                 return View(m_embedService.EmbedConfig);
@@ -49,7 +51,9 @@ namespace PowerBIEmbedded_AppOwnsData.Controllers
 
         public async Task<ActionResult> EmbedDashboard()
         {
-            var embedResult = await m_embedService.EmbedDashboard();
+            string dashboardId = ConfigurationManager.AppSettings["dashboardId"];
+
+            var embedResult = await m_embedService.EmbedDashboard(dashboardId);
             if (embedResult)
             {
                 return View(m_embedService.EmbedConfig);
@@ -71,6 +75,33 @@ namespace PowerBIEmbedded_AppOwnsData.Controllers
             {
                 return View(m_embedService.TileEmbedConfig);
             }
+        }
+
+        //////////////////////////////////////////////////////////////////////////////////////
+        ///
+        // Update for the various reports and dashboards here.
+        ///
+        //////////////////////////////////////////////////////////////////////////////////////
+
+        public async Task<ActionResult> SolarAnalysisReport()
+        {
+            var id = ConfigurationManager.AppSettings["SolarAnalysisReport"];
+            await m_embedService.EmbedReport(id);
+            return View(m_embedService.EmbedConfig);
+        }
+
+        public async Task<ActionResult> SolarAnalysisOverviewDashboard()
+        {
+            var id = ConfigurationManager.AppSettings["SolarAnalysisOverviewDashboard"];
+            await m_embedService.EmbedDashboard(id);
+            return View(m_embedService.EmbedConfig);
+        }
+
+        public async Task<ActionResult> SolarAndUsageDashboard()
+        {
+            var id = ConfigurationManager.AppSettings["SolarAndUsageDashboard"];
+            await m_embedService.EmbedDashboard(id);
+            return View(m_embedService.EmbedConfig);
         }
     }
 }

@@ -13,8 +13,8 @@ namespace PowerBIEmbedded_AppOwnsData.Services
         EmbedConfig EmbedConfig { get; }
         TileEmbedConfig TileEmbedConfig { get; }
 
-        Task<bool> EmbedReport(string userName, string roles);
-        Task<bool> EmbedDashboard();
+        Task<bool> EmbedReport(string id, string userName = null, string roles = null);
+        Task<bool> EmbedDashboard(string id);
         Task<bool> EmbedTile();
     }
 }

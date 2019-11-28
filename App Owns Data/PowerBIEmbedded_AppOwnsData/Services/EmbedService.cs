@@ -21,14 +21,9 @@ namespace PowerBIEmbedded_AppOwnsData.Services
         private static readonly string ApplicationId = ConfigurationManager.AppSettings["applicationId"];
         private static readonly string ApiUrl = ConfigurationManager.AppSettings["apiUrl"];
         private static readonly string WorkspaceId = ConfigurationManager.AppSettings["workspaceId"];
-        private static readonly string ReportId = ConfigurationManager.AppSettings["reportId"];
-
-        private static readonly string AuthenticationType = ConfigurationManager.AppSettings["AuthenticationType"];
-        private static readonly NameValueCollection sectionConfig = ConfigurationManager.GetSection(AuthenticationType) as NameValueCollection;
-        private static readonly string ApplicationSecret = sectionConfig["applicationSecret"];
-        private static readonly string Tenant = sectionConfig["tenant"];
-        private static readonly string Username = sectionConfig["pbiUsername"];
-        private static readonly string Password = sectionConfig["pbiPassword"];
+       
+        private static readonly string Username = ConfigurationManager.AppSettings["pbiUsername"];
+        private static readonly string Password = ConfigurationManager.AppSettings["pbiPassword"];
 
         public EmbedConfig EmbedConfig
         {
@@ -51,11 +46,11 @@ namespace PowerBIEmbedded_AppOwnsData.Services
             m_tileEmbedConfig = new TileEmbedConfig();
         }
 
-        public async Task<bool> EmbedReport(string username, string roles)
+        public async Task<bool> EmbedReport(string id, string username = null, string roles = null)
         {
             
             // Get token credentials for user
-            var getCredentialsResult = await GetTokenCredentials();
+            var getCredentialsResult = GetTokenCredentials();
             if (!getCredentialsResult)
             {
                 // The error message set in GetTokenCredentials
@@ -78,14 +73,14 @@ namespace PowerBIEmbedded_AppOwnsData.Services
                     }
 
                     Report report;
-                    if (string.IsNullOrWhiteSpace(ReportId))
+                    if (string.IsNullOrWhiteSpace(id))
                     {
                         // Get the first report in the workspace.
                         report = reports.Value.FirstOrDefault();
                     }
                     else
                     {
-                        report = reports.Value.FirstOrDefault(r => r.Id.Equals(ReportId, StringComparison.InvariantCultureIgnoreCase));
+                        report = reports.Value.FirstOrDefault(r => r.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase));
                     }
 
                     if (report == null)
@@ -140,10 +135,10 @@ namespace PowerBIEmbedded_AppOwnsData.Services
             return true;
         }
 
-        public async Task<bool> EmbedDashboard()
+        public async Task<bool> EmbedDashboard(string id)
         {
             // Get token credentials for user
-            var getCredentialsResult = await GetTokenCredentials();
+            var getCredentialsResult = GetTokenCredentials();
             if (!getCredentialsResult)
             {
                 // The error message set in GetTokenCredentials
@@ -158,12 +153,27 @@ namespace PowerBIEmbedded_AppOwnsData.Services
                     // Get a list of dashboards.
                     var dashboards = await client.Dashboards.GetDashboardsInGroupAsync(WorkspaceId);
 
-                    // Get the first report in the workspace.
-                    var dashboard = dashboards.Value.FirstOrDefault();
+                    // No dashboards retrieved for the given workspace.
+                    if (dashboards.Value.Count() == 0)
+                    {
+                        m_embedConfig.ErrorMessage = "No dashboards were found in the workspace";
+                        return false;
+                    }
+
+                    Dashboard dashboard;
+                    if (string.IsNullOrWhiteSpace(id))
+                    {
+                        // Get the first report in the workspace.
+                        dashboard = dashboards.Value.FirstOrDefault();
+                    }
+                    else
+                    {
+                        dashboard = dashboards.Value.FirstOrDefault(r => r.Id.Equals(id, StringComparison.InvariantCultureIgnoreCase));
+                    }
 
                     if (dashboard == null)
                     {
-                        m_embedConfig.ErrorMessage = "Workspace has no dashboards.";
+                        m_embedConfig.ErrorMessage = "No dashboard with the given ID was found in the workspace. Make sure ReportId is valid.";
                         return false;
                     }
 
@@ -198,7 +208,7 @@ namespace PowerBIEmbedded_AppOwnsData.Services
         public async Task<bool> EmbedTile()
         {
             // Get token credentials for user
-            var getCredentialsResult = await GetTokenCredentials();
+            var getCredentialsResult = GetTokenCredentials();
             if (!getCredentialsResult)
             {
                 // The error message set in GetTokenCredentials
@@ -287,64 +297,35 @@ namespace PowerBIEmbedded_AppOwnsData.Services
             {
                 return "WorkspaceId must be a Guid object. Please select a workspace you own and fill its Id in web.config";
             }
-
-            if (AuthenticationType.Equals("MasterUser"))
+                        
+            // Username must have a value.
+            if (string.IsNullOrWhiteSpace(Username))
             {
-                // Username must have a value.
-                if (string.IsNullOrWhiteSpace(Username))
-                {
-                    return "Username is empty. Please fill Power BI username in web.config";
-                }
-
-                // Password must have a value.
-                if (string.IsNullOrWhiteSpace(Password))
-                {
-                    return "Password is empty. Please fill password of Power BI username in web.config";
-                }
-            }
-            else
-            {
-                if (string.IsNullOrWhiteSpace(ApplicationSecret))
-                {
-                    return "ApplicationSecret is empty. please register your application as Web app and fill appSecret in web.config.";
-                }
-
-                // Must fill tenant Id
-                if (string.IsNullOrWhiteSpace(Tenant))
-                {
-                    return "Invalid Tenant. Please fill Tenant ID in Tenant under web.config";
-                }
+                return "Username is empty. Please fill Power BI username in web.config";
             }
 
+            // Password must have a value.
+            if (string.IsNullOrWhiteSpace(Password))
+            {
+                return "Password is empty. Please fill password of Power BI username in web.config";
+            }
+            
             return null;
         }
 
-        private async Task<AuthenticationResult> DoAuthentication()
+        private AuthenticationResult DoAuthentication()
         {
             AuthenticationResult authenticationResult = null;
-            if (AuthenticationType.Equals("MasterUser"))
-            {
-                var authenticationContext = new AuthenticationContext(AuthorityUrl);
+            var authenticationContext = new AuthenticationContext(AuthorityUrl);
 
-                // Authentication using master user credentials
-                var credential = new UserPasswordCredential(Username, Password);
-                authenticationResult = authenticationContext.AcquireTokenAsync(ResourceUrl, ApplicationId, credential).Result;
-            }
-            else
-            {
-                // For app only authentication, we need the specific tenant id in the authority url
-                var tenantSpecificURL = AuthorityUrl.Replace("common", Tenant);
-                var authenticationContext = new AuthenticationContext(tenantSpecificURL);
-
-                // Authentication using app credentials
-                var credential = new ClientCredential(ApplicationId, ApplicationSecret);
-                authenticationResult = await authenticationContext.AcquireTokenAsync(ResourceUrl, credential);
-            }
-
+            // Authentication using master user credentials
+            var credential = new UserPasswordCredential(Username, Password);
+            authenticationResult = authenticationContext.AcquireTokenAsync(ResourceUrl, ApplicationId, credential).Result;
+           
             return authenticationResult;
         }
 
-        private async Task<bool> GetTokenCredentials()
+        private bool GetTokenCredentials()
         {
             // var result = new EmbedConfig { Username = username, Roles = roles };
             var error = GetWebConfigErrors();
@@ -358,7 +339,7 @@ namespace PowerBIEmbedded_AppOwnsData.Services
             AuthenticationResult authenticationResult = null;
             try
             {
-                authenticationResult = await DoAuthentication();
+                authenticationResult = DoAuthentication();
             }
             catch (AggregateException exc)
             {
