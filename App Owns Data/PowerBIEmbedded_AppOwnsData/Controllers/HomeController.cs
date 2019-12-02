@@ -34,7 +34,7 @@ namespace PowerBIEmbedded_AppOwnsData.Controllers
             return View(result);
         }
 
-        public async Task<ActionResult> EmbedReport(string username, string roles)
+        public async Task<ActionResult> EmbedReport(string roles)
         {
             string reportId = ConfigurationManager.AppSettings["reportId"];
 

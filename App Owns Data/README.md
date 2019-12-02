@@ -26,7 +26,7 @@ Error is fixed by updating the following in Package Manger Console: Update-Packa
 
 ## KeyVault to hold app secrets
 
-Azure KeyVault is be used to store the Power BI Pro username and password.
+Azure KeyVault is used to store the Power BI Pro username and password.
 
 Add KeyVault as a Connected Service: https://docs.microsoft.com/en-us/azure/key-vault/vs-key-vault-add-connected-service
 	Make sure the ASP.NET Target Framework is 4.7.1 or greater to properly update the web.config file
