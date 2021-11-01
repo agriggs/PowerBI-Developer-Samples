@@ -17,7 +17,7 @@ In this repository you can find sample apps explaining how to use Power BI API f
 Read this documentation to prepare your environment
 https://docs.microsoft.com/en-us/power-bi/developer/embedding-content
 
-Use one of the following samples to expirience the API.
+Use one of the following samples to get experience with the API.
 
 You can use the instructions in each sample's directory to learn how to register an app, configure and run the sample.
 
